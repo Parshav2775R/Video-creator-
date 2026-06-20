@@ -1,0 +1,368 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: AI Cartoon Video Generator API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: generate
+    description: AI generation endpoints
+  - name: projects
+    description: Project management
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /generate/image:
+    post:
+      operationId: generateImage
+      tags: [generate]
+      summary: Generate cartoon image from prompt via Hugging Face
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImageGenInput"
+      responses:
+        "200":
+          description: Generated image URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImageGenResult"
+        "500":
+          description: Generation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /generate/speech:
+    post:
+      operationId: generateSpeech
+      tags: [generate]
+      summary: Generate Hindi speech audio from text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpeechGenInput"
+      responses:
+        "200":
+          description: Audio data as base64
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeechGenResult"
+        "500":
+          description: Generation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /video/compile:
+    post:
+      operationId: compileVideo
+      tags: [generate]
+      summary: Compile scenes into an MP4 video using FFmpeg
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VideoCompileInput"
+      responses:
+        "200":
+          description: Video compiled, returns download URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoCompileResult"
+        "500":
+          description: Compilation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /projects:
+    get:
+      operationId: listProjects
+      tags: [projects]
+      summary: List all projects
+      responses:
+        "200":
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Project"
+    post:
+      operationId: createProject
+      tags: [projects]
+      summary: Create a new project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectInput"
+      responses:
+        "201":
+          description: Created project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+
+  /projects/{id}:
+    get:
+      operationId: getProject
+      tags: [projects]
+      summary: Get a project by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Project detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    patch:
+      operationId: updateProject
+      tags: [projects]
+      summary: Update a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectUpdate"
+      responses:
+        "200":
+          description: Updated project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+    delete:
+      operationId: deleteProject
+      tags: [projects]
+      summary: Delete a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    DeleteResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    ImageGenInput:
+      type: object
+      required: [prompt]
+      properties:
+        prompt:
+          type: string
+          description: Cartoon image description
+        style:
+          type: ["string", "null"]
+          description: Art style (anime, cartoon, ghibli, etc.)
+
+    ImageGenResult:
+      type: object
+      required: [imageUrl, prompt]
+      properties:
+        imageUrl:
+          type: string
+          description: Base64 data URL or hosted URL of the generated image
+        prompt:
+          type: string
+
+    SpeechGenInput:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          description: Hindi text to convert to speech
+        language:
+          type: ["string", "null"]
+          description: Language code (default hi)
+
+    SpeechGenResult:
+      type: object
+      required: [audioBase64, mimeType]
+      properties:
+        audioBase64:
+          type: string
+          description: Base64-encoded audio data
+        mimeType:
+          type: string
+
+    Scene:
+      type: object
+      required: [id, order, prompt, subtitle]
+      properties:
+        id:
+          type: string
+        order:
+          type: integer
+        prompt:
+          type: string
+        subtitle:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+        audioBase64:
+          type: ["string", "null"]
+        duration:
+          type: ["integer", "null"]
+          description: Duration in seconds
+
+    VideoCompileInput:
+      type: object
+      required: [projectId, scenes]
+      properties:
+        projectId:
+          type: string
+        scenes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Scene"
+
+    VideoCompileResult:
+      type: object
+      required: [videoUrl, projectId]
+      properties:
+        videoUrl:
+          type: string
+          description: URL to download the compiled MP4
+        projectId:
+          type: string
+
+    Project:
+      type: object
+      required: [id, title, createdAt, status, scenes]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: ["string", "null"]
+          format: date-time
+        status:
+          type: string
+          description: draft | generating | ready | exported
+        scenes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Scene"
+        videoUrl:
+          type: ["string", "null"]
+        thumbnailUrl:
+          type: ["string", "null"]
+
+    ProjectInput:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        scenes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Scene"
+
+    ProjectUpdate:
+      type: object
+      properties:
+        title:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        status:
+          type: ["string", "null"]
+        scenes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Scene"
+        videoUrl:
+          type: ["string", "null"]
+        thumbnailUrl:
+          type: ["string", "null"]

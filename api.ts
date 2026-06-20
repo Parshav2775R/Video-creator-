@@ -5,701 +5,192 @@
  * AI Cartoon Video Generator API
  * OpenAPI spec version: 0.1.0
  */
-import {
-  useMutation,
-  useQuery
-} from '@tanstack/react-query';
-import type {
-  MutationFunction,
-  QueryFunction,
-  QueryKey,
-  UseMutationOptions,
-  UseMutationResult,
-  UseQueryOptions,
-  UseQueryResult
-} from '@tanstack/react-query';
-
-import type {
-  ApiError,
-  DeleteResult,
-  HealthStatus,
-  ImageGenInput,
-  ImageGenResult,
-  Project,
-  ProjectInput,
-  ProjectUpdate,
-  SpeechGenInput,
-  SpeechGenResult,
-  VideoCompileInput,
-  VideoCompileResult
-} from './api.schemas';
-
-import { customFetch } from '../custom-fetch';
-import type { ErrorType , BodyType } from '../custom-fetch';
-
-type AwaitedInput<T> = PromiseLike<T> | T;
-
-      type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
-
-
-type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
-
-
-export const getHealthCheckUrl = () => {
-
-
-
-
-  return `/api/healthz`
-}
-
-/**
- * @summary Health check
- */
-export const healthCheck = async ( options?: RequestInit): Promise<HealthStatus> => {
-
-  return customFetch<HealthStatus>(getHealthCheckUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getHealthCheckQueryKey = () => {
-    return [
-    `/api/healthz`
-    ] as const;
-    }
-
-
-export const getHealthCheckQueryOptions = <TData = Awaited<ReturnType<typeof healthCheck>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof healthCheck>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getHealthCheckQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof healthCheck>>> = ({ signal }) => healthCheck({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof healthCheck>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type HealthCheckQueryResult = NonNullable<Awaited<ReturnType<typeof healthCheck>>>
-export type HealthCheckQueryError = ErrorType<unknown>
+import * as zod from 'zod';
 
 
 /**
  * @summary Health check
  */
+export const HealthCheckResponse = zod.object({
+  "status": zod.string()
+})
 
-export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof healthCheck>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getHealthCheckQueryOptions(options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return { ...query, queryKey: queryOptions.queryKey };
-}
-
-
-
-
-
-
-
-export const getGenerateImageUrl = () => {
-
-
-
-
-  return `/api/generate/image`
-}
 
 /**
  * @summary Generate cartoon image from prompt via Hugging Face
  */
-export const generateImage = async (imageGenInput: ImageGenInput, options?: RequestInit): Promise<ImageGenResult> => {
+export const GenerateImageBody = zod.object({
+  "prompt": zod.string().describe('Cartoon image description'),
+  "style": zod.string().nullish().describe('Art style (anime, cartoon, ghibli, etc.)')
+})
 
-  return customFetch<ImageGenResult>(getGenerateImageUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      imageGenInput,)
-  }
-);}
+export const GenerateImageResponse = zod.object({
+  "imageUrl": zod.string().describe('Base64 data URL or hosted URL of the generated image'),
+  "prompt": zod.string()
+})
 
-
-
-
-export const getGenerateImageMutationOptions = <TError = ErrorType<ApiError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateImage>>, TError,{data: BodyType<ImageGenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof generateImage>>, TError,{data: BodyType<ImageGenInput>}, TContext> => {
-
-const mutationKey = ['generateImage'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateImage>>, {data: BodyType<ImageGenInput>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  generateImage(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type GenerateImageMutationResult = NonNullable<Awaited<ReturnType<typeof generateImage>>>
-    export type GenerateImageMutationBody = BodyType<ImageGenInput>
-    export type GenerateImageMutationError = ErrorType<ApiError>
-
-    /**
- * @summary Generate cartoon image from prompt via Hugging Face
- */
-export const useGenerateImage = <TError = ErrorType<ApiError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateImage>>, TError,{data: BodyType<ImageGenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof generateImage>>,
-        TError,
-        {data: BodyType<ImageGenInput>},
-        TContext
-      > => {
-      return useMutation(getGenerateImageMutationOptions(options));
-    }
-
-export const getGenerateSpeechUrl = () => {
-
-
-
-
-  return `/api/generate/speech`
-}
 
 /**
  * @summary Generate Hindi speech audio from text
  */
-export const generateSpeech = async (speechGenInput: SpeechGenInput, options?: RequestInit): Promise<SpeechGenResult> => {
+export const GenerateSpeechBody = zod.object({
+  "text": zod.string().describe('Hindi text to convert to speech'),
+  "language": zod.string().nullish().describe('Language code (default hi)')
+})
 
-  return customFetch<SpeechGenResult>(getGenerateSpeechUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      speechGenInput,)
-  }
-);}
+export const GenerateSpeechResponse = zod.object({
+  "audioBase64": zod.string().describe('Base64-encoded audio data'),
+  "mimeType": zod.string()
+})
 
-
-
-
-export const getGenerateSpeechMutationOptions = <TError = ErrorType<ApiError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateSpeech>>, TError,{data: BodyType<SpeechGenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof generateSpeech>>, TError,{data: BodyType<SpeechGenInput>}, TContext> => {
-
-const mutationKey = ['generateSpeech'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateSpeech>>, {data: BodyType<SpeechGenInput>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  generateSpeech(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type GenerateSpeechMutationResult = NonNullable<Awaited<ReturnType<typeof generateSpeech>>>
-    export type GenerateSpeechMutationBody = BodyType<SpeechGenInput>
-    export type GenerateSpeechMutationError = ErrorType<ApiError>
-
-    /**
- * @summary Generate Hindi speech audio from text
- */
-export const useGenerateSpeech = <TError = ErrorType<ApiError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateSpeech>>, TError,{data: BodyType<SpeechGenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof generateSpeech>>,
-        TError,
-        {data: BodyType<SpeechGenInput>},
-        TContext
-      > => {
-      return useMutation(getGenerateSpeechMutationOptions(options));
-    }
-
-export const getCompileVideoUrl = () => {
-
-
-
-
-  return `/api/video/compile`
-}
 
 /**
  * @summary Compile scenes into an MP4 video using FFmpeg
  */
-export const compileVideo = async (videoCompileInput: VideoCompileInput, options?: RequestInit): Promise<VideoCompileResult> => {
+export const CompileVideoBody = zod.object({
+  "projectId": zod.string(),
+  "scenes": zod.array(zod.object({
+  "id": zod.string(),
+  "order": zod.number(),
+  "prompt": zod.string(),
+  "subtitle": zod.string(),
+  "imageUrl": zod.string().nullish(),
+  "audioBase64": zod.string().nullish(),
+  "duration": zod.number().nullish().describe('Duration in seconds')
+}))
+})
 
-  return customFetch<VideoCompileResult>(getCompileVideoUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      videoCompileInput,)
-  }
-);}
-
-
-
-
-export const getCompileVideoMutationOptions = <TError = ErrorType<ApiError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof compileVideo>>, TError,{data: BodyType<VideoCompileInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof compileVideo>>, TError,{data: BodyType<VideoCompileInput>}, TContext> => {
-
-const mutationKey = ['compileVideo'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof compileVideo>>, {data: BodyType<VideoCompileInput>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  compileVideo(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CompileVideoMutationResult = NonNullable<Awaited<ReturnType<typeof compileVideo>>>
-    export type CompileVideoMutationBody = BodyType<VideoCompileInput>
-    export type CompileVideoMutationError = ErrorType<ApiError>
-
-    /**
- * @summary Compile scenes into an MP4 video using FFmpeg
- */
-export const useCompileVideo = <TError = ErrorType<ApiError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof compileVideo>>, TError,{data: BodyType<VideoCompileInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof compileVideo>>,
-        TError,
-        {data: BodyType<VideoCompileInput>},
-        TContext
-      > => {
-      return useMutation(getCompileVideoMutationOptions(options));
-    }
-
-export const getListProjectsUrl = () => {
-
-
-
-
-  return `/api/projects`
-}
-
-/**
- * @summary List all projects
- */
-export const listProjects = async ( options?: RequestInit): Promise<Project[]> => {
-
-  return customFetch<Project[]>(getListProjectsUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getListProjectsQueryKey = () => {
-    return [
-    `/api/projects`
-    ] as const;
-    }
-
-
-export const getListProjectsQueryOptions = <TData = Awaited<ReturnType<typeof listProjects>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListProjectsQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjects>>> = ({ signal }) => listProjects({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type ListProjectsQueryResult = NonNullable<Awaited<ReturnType<typeof listProjects>>>
-export type ListProjectsQueryError = ErrorType<unknown>
+export const CompileVideoResponse = zod.object({
+  "videoUrl": zod.string().describe('URL to download the compiled MP4'),
+  "projectId": zod.string()
+})
 
 
 /**
  * @summary List all projects
  */
+export const ListProjectsResponseItem = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date().nullish(),
+  "status": zod.string().describe('draft | generating | ready | exported'),
+  "scenes": zod.array(zod.object({
+  "id": zod.string(),
+  "order": zod.number(),
+  "prompt": zod.string(),
+  "subtitle": zod.string(),
+  "imageUrl": zod.string().nullish(),
+  "audioBase64": zod.string().nullish(),
+  "duration": zod.number().nullish().describe('Duration in seconds')
+})),
+  "videoUrl": zod.string().nullish(),
+  "thumbnailUrl": zod.string().nullish()
+})
+export const ListProjectsResponse = zod.array(ListProjectsResponseItem)
 
-export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProjects>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getListProjectsQueryOptions(options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return { ...query, queryKey: queryOptions.queryKey };
-}
-
-
-
-
-
-
-
-export const getCreateProjectUrl = () => {
-
-
-
-
-  return `/api/projects`
-}
 
 /**
  * @summary Create a new project
  */
-export const createProject = async (projectInput: ProjectInput, options?: RequestInit): Promise<Project> => {
-
-  return customFetch<Project>(getCreateProjectUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      projectInput,)
-  }
-);}
-
-
-
-
-export const getCreateProjectMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProject>>, TError,{data: BodyType<ProjectInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof createProject>>, TError,{data: BodyType<ProjectInput>}, TContext> => {
-
-const mutationKey = ['createProject'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProject>>, {data: BodyType<ProjectInput>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  createProject(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateProjectMutationResult = NonNullable<Awaited<ReturnType<typeof createProject>>>
-    export type CreateProjectMutationBody = BodyType<ProjectInput>
-    export type CreateProjectMutationError = ErrorType<unknown>
-
-    /**
- * @summary Create a new project
- */
-export const useCreateProject = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProject>>, TError,{data: BodyType<ProjectInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof createProject>>,
-        TError,
-        {data: BodyType<ProjectInput>},
-        TContext
-      > => {
-      return useMutation(getCreateProjectMutationOptions(options));
-    }
-
-export const getGetProjectUrl = (id: string,) => {
-
-
-
-
-  return `/api/projects/${id}`
-}
-
-/**
- * @summary Get a project by ID
- */
-export const getProject = async (id: string, options?: RequestInit): Promise<Project> => {
-
-  return customFetch<Project>(getGetProjectUrl(id),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetProjectQueryKey = (id: string,) => {
-    return [
-    `/api/projects/${id}`
-    ] as const;
-    }
-
-
-export const getGetProjectQueryOptions = <TData = Awaited<ReturnType<typeof getProject>>, TError = ErrorType<ApiError>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProject>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetProjectQueryKey(id);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProject>>> = ({ signal }) => getProject(id, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getProject>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type GetProjectQueryResult = NonNullable<Awaited<ReturnType<typeof getProject>>>
-export type GetProjectQueryError = ErrorType<ApiError>
+export const CreateProjectBody = zod.object({
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "scenes": zod.array(zod.object({
+  "id": zod.string(),
+  "order": zod.number(),
+  "prompt": zod.string(),
+  "subtitle": zod.string(),
+  "imageUrl": zod.string().nullish(),
+  "audioBase64": zod.string().nullish(),
+  "duration": zod.number().nullish().describe('Duration in seconds')
+})).optional()
+})
 
 
 /**
  * @summary Get a project by ID
  */
+export const GetProjectParams = zod.object({
+  "id": zod.coerce.string()
+})
 
-export function useGetProject<TData = Awaited<ReturnType<typeof getProject>>, TError = ErrorType<ApiError>>(
- id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProject>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const GetProjectResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date().nullish(),
+  "status": zod.string().describe('draft | generating | ready | exported'),
+  "scenes": zod.array(zod.object({
+  "id": zod.string(),
+  "order": zod.number(),
+  "prompt": zod.string(),
+  "subtitle": zod.string(),
+  "imageUrl": zod.string().nullish(),
+  "audioBase64": zod.string().nullish(),
+  "duration": zod.number().nullish().describe('Duration in seconds')
+})),
+  "videoUrl": zod.string().nullish(),
+  "thumbnailUrl": zod.string().nullish()
+})
 
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getGetProjectQueryOptions(id,options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return { ...query, queryKey: queryOptions.queryKey };
-}
-
-
-
-
-
-
-
-export const getUpdateProjectUrl = (id: string,) => {
-
-
-
-
-  return `/api/projects/${id}`
-}
 
 /**
  * @summary Update a project
  */
-export const updateProject = async (id: string,
-    projectUpdate: ProjectUpdate, options?: RequestInit): Promise<Project> => {
+export const UpdateProjectParams = zod.object({
+  "id": zod.coerce.string()
+})
 
-  return customFetch<Project>(getUpdateProjectUrl(id),
-  {
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      projectUpdate,)
-  }
-);}
+export const UpdateProjectBody = zod.object({
+  "title": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.string().nullish(),
+  "scenes": zod.array(zod.object({
+  "id": zod.string(),
+  "order": zod.number(),
+  "prompt": zod.string(),
+  "subtitle": zod.string(),
+  "imageUrl": zod.string().nullish(),
+  "audioBase64": zod.string().nullish(),
+  "duration": zod.number().nullish().describe('Duration in seconds')
+})).optional(),
+  "videoUrl": zod.string().nullish(),
+  "thumbnailUrl": zod.string().nullish()
+})
 
+export const UpdateProjectResponse = zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date().nullish(),
+  "status": zod.string().describe('draft | generating | ready | exported'),
+  "scenes": zod.array(zod.object({
+  "id": zod.string(),
+  "order": zod.number(),
+  "prompt": zod.string(),
+  "subtitle": zod.string(),
+  "imageUrl": zod.string().nullish(),
+  "audioBase64": zod.string().nullish(),
+  "duration": zod.number().nullish().describe('Duration in seconds')
+})),
+  "videoUrl": zod.string().nullish(),
+  "thumbnailUrl": zod.string().nullish()
+})
 
-
-
-export const getUpdateProjectMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProject>>, TError,{id: string;data: BodyType<ProjectUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof updateProject>>, TError,{id: string;data: BodyType<ProjectUpdate>}, TContext> => {
-
-const mutationKey = ['updateProject'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProject>>, {id: string;data: BodyType<ProjectUpdate>}> = (props) => {
-          const {id,data} = props ?? {};
-
-          return  updateProject(id,data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type UpdateProjectMutationResult = NonNullable<Awaited<ReturnType<typeof updateProject>>>
-    export type UpdateProjectMutationBody = BodyType<ProjectUpdate>
-    export type UpdateProjectMutationError = ErrorType<unknown>
-
-    /**
- * @summary Update a project
- */
-export const useUpdateProject = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProject>>, TError,{id: string;data: BodyType<ProjectUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof updateProject>>,
-        TError,
-        {id: string;data: BodyType<ProjectUpdate>},
-        TContext
-      > => {
-      return useMutation(getUpdateProjectMutationOptions(options));
-    }
-
-export const getDeleteProjectUrl = (id: string,) => {
-
-
-
-
-  return `/api/projects/${id}`
-}
 
 /**
  * @summary Delete a project
  */
-export const deleteProject = async (id: string, options?: RequestInit): Promise<DeleteResult> => {
+export const DeleteProjectParams = zod.object({
+  "id": zod.coerce.string()
+})
 
-  return customFetch<DeleteResult>(getDeleteProjectUrl(id),
-  {
-    ...options,
-    method: 'DELETE'
+export const DeleteProjectResponse = zod.object({
+  "success": zod.boolean()
+})
 
-
-  }
-);}
-
-
-
-
-export const getDeleteProjectMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProject>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof deleteProject>>, TError,{id: string}, TContext> => {
-
-const mutationKey = ['deleteProject'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteProject>>, {id: string}> = (props) => {
-          const {id} = props ?? {};
-
-          return  deleteProject(id,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type DeleteProjectMutationResult = NonNullable<Awaited<ReturnType<typeof deleteProject>>>
-
-    export type DeleteProjectMutationError = ErrorType<unknown>
-
-    /**
- * @summary Delete a project
- */
-export const useDeleteProject = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProject>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof deleteProject>>,
-        TError,
-        {id: string},
-        TContext
-      > => {
-      return useMutation(getDeleteProjectMutationOptions(options));
-    }
 
